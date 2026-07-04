@@ -2,25 +2,30 @@ plugins {
     id 'java'
 }
 
+// Single source of truth for the app version. Emitted via `printVersion` for tooling (Terraform/CI).
+version = '1.0.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.3'
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.2'
-    implementation 'com.okta.jwt:okta-jwt-verifier:0.5.12'
-    runtimeOnly 'com.okta.jwt:okta-jwt-verifier-impl:0.5.12'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.22.0'
+    implementation 'com.okta.jwt:okta-jwt-verifier:0.5.14'
+    runtimeOnly 'com.okta.jwt:okta-jwt-verifier-impl:0.5.14'
     runtimeOnly 'org.slf4j:slf4j-nop:2.0.13'
-}
-
-compileJava {
-    options.release = 21
 }
 
 // Lambda deployment package: compiled classes at the root, dependencies under lib/
 tasks.register('buildZip', Zip) {
-    archiveFileName = 'okta-app-lambda.zip'
+    archiveFileName = "okta-app-lambda-${version}.zip"
     destinationDirectory = layout.buildDirectory.dir('distributions')
     from compileJava
     from processResources
@@ -31,3 +36,11 @@ tasks.register('buildZip', Zip) {
 }
 
 build.dependsOn buildZip
+
+// Emit just the version so tooling (Terraform/CI) can read it without parsing this file.
+// Usage: ./gradlew -q printVersion
+tasks.register('printVersion') {
+    doLast {
+        println project.version
+    }
+}

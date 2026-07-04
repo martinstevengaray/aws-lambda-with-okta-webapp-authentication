@@ -1,3 +1,8 @@
+variable "app_version" {
+  description = "App version from the Gradle build (single source of truth in build.gradle). Pass it through: terraform apply -var \"app_version=$(cd .. && ./gradlew -q printVersion)\""
+  type        = string
+}
+
 variable "region" {
   description = "AWS region to deploy into"
   type        = string

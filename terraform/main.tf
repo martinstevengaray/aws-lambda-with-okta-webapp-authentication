@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 locals {
-  lambda_zip = "${path.module}/../build/distributions/okta-app-lambda.zip"
+  lambda_zip = "${path.module}/../build/distributions/okta-app-lambda-${var.app_version}.zip"
 }
 
 resource "aws_iam_role" "lambda" {

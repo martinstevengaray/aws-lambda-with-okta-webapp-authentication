@@ -26,16 +26,27 @@ signature, `iss`/`aud`/`exp` checks); anything else gets a `401`.
 Requires JDK 21 (the Lambda targets the `java21` runtime).
 
 ```sh
-./gradlew build          # produces build/distributions/okta-app-lambda.zip
+./gradlew build          # produces build/distributions/okta-app-lambda-<version>.zip
 ```
 
+The version is defined once in `build.gradle` and readable by tooling via
+`./gradlew -q printVersion`.
+
 ## Deploy
+
+One-time setup:
 
 ```sh
 cd terraform
 cp terraform.tfvars.example terraform.tfvars   # then fill in your issuer/audience
 terraform init
-terraform apply
+cd ..
+```
+
+Then build and deploy in one step (extra args are passed to `terraform apply`):
+
+```sh
+./deploy.sh
 ```
 
 Outputs include `function_url`.

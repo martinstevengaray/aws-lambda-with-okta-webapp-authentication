@@ -1,4 +1,6 @@
 # Copy to terraform.tfvars and fill in your Okta org.
+# Do NOT set app_version here — it comes from the Gradle build so it can't drift:
+#   terraform apply -var "app_version=$(cd .. && ./gradlew -q printVersion)"
 # The issuer must be a custom authorization server (org-server tokens are opaque).
 okta_issuer   = "https://your-org.okta.com/oauth2/default"
 okta_audience = "api://default"
