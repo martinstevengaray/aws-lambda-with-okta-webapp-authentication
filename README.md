@@ -1,3 +1,11 @@
+setup:
+cd terraform
+terraform init
+..
+
+
+
+
 # okta-app
 
 An AWS Lambda (`okta-app-lambda`) exposed via a public Lambda Function URL that echoes back
