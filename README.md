@@ -1,11 +1,3 @@
-setup:
-cd terraform
-terraform init
-..
-
-
-
-
 # okta-app
 
 An AWS Lambda (`okta-app-lambda`) exposed via a public Lambda Function URL that echoes back
@@ -15,7 +7,7 @@ carry a valid Okta-issued bearer token — verified with Okta's
 signature, `iss`/`aud`/`exp` checks); anything else gets a `401`.
 
 - `src/main/java/com/example/oktaapp/OktaAppLambda.java` — handler + token enforcement
-- `terraform/` — IAM role, Lambda, public Function URL; state in `s3://tfstate-346885780490/okta-app-lambda/`
+- `terraform/` — IAM role, Lambda, public Function URL; state in `s3://tfstate-<account id>/okta-app-lambda/`
 
 ## Okta setup (manual, one time)
 
@@ -47,9 +39,15 @@ One-time setup:
 ```sh
 cd terraform
 cp terraform.tfvars.example terraform.tfvars   # then fill in your issuer/audience
-terraform init
 cd ..
 ```
+
+The state bucket name (`tfstate-<account id>`) is not hardcoded; on first run
+`deploy.sh` runs `terraform init -backend-config="bucket=tfstate-$ACCOUNT_ID"`,
+using `AWS_ACCOUNT_ID` if set and otherwise deriving the account ID from your
+current AWS credentials via `aws sts get-caller-identity`. Init is skipped once
+`terraform/.terraform/` exists; delete that directory to force a re-init (e.g.
+after a backend or provider change).
 
 Then build and deploy in one step (extra args are passed to `terraform apply`):
 
