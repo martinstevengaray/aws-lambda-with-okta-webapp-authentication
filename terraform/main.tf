@@ -87,11 +87,11 @@ resource "aws_lambda_function" "this" {
 
   environment {
     variables = {
-      OKTA_ISSUER                  = var.okta_issuer
-      OKTA_AUDIENCE                = var.okta_audience
-      OKTA_WEB_CLIENT_ID           = var.okta_web_client_id
-      OKTA_WEB_CLIENT_SECRET_PARAM = aws_ssm_parameter.okta_web_client_secret.name
-      OKTA_SCOPES                  = var.okta_scopes
+      OKTA_ISSUER                              = var.okta_issuer
+      OKTA_AUDIENCE                            = var.okta_audience
+      OKTA_WEB_CLIENT_ID                       = var.okta_web_client_id
+      OKTA_WEB_CLIENT_SECRET_SSM_PARAMETER_KEY = aws_ssm_parameter.okta_web_client_secret.name
+      OKTA_SCOPES                              = var.okta_scopes
     }
   }
 }

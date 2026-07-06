@@ -6,6 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.okta.jwt.Jwt;
 import com.okta.jwt.JwtVerificationException;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -33,13 +38,18 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
     private static final ObjectMapper MAPPER = new ObjectMapper(); //todo move out
     private static final String TOKEN_COOKIE = "okta_token"; //todo move out
 
+    private static final HttpClient HTTP = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
+
     private final OktaDelegate oktaDelegate;
 
-    public OktaAppLambda() {
+    public OktaAppLambda() throws Exception {
         String oktaIssuer = System.getenv("OKTA_ISSUER");
         String oktaAudience = System.getenv("OKTA_AUDIENCE");
         String oktaWebClientId = System.getenv("OKTA_WEB_CLIENT_ID");
-        String oktaWebClientSecret = System.getenv("OKTA_WEB_CLIENT_SECRET_PARAM"); //todo investigate PARAM suffix
+        String oktaWebClientSecretSsmParameterKey = System.getenv("OKTA_WEB_CLIENT_SECRET_SSM_PARAMETER_KEY");
+        String oktaWebClientSecret = clientSecret(oktaWebClientSecretSsmParameterKey);
         String oktaScopes = System.getenv("OKTA_SCOPES");
         this.oktaDelegate = new OktaDelegate(oktaIssuer, oktaAudience, oktaWebClientId, oktaWebClientSecret, oktaScopes);
     }
@@ -83,6 +93,27 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
             return LambdaUtils.response(500, Map.of("content-type", "application/json"),
                     "{\"error\":\"failed to serialize echo response\"}");
         }
+    }
+
+    /**
+     * The web app's client secret, from SSM Parameter Store via the AWS
+     * Parameters and Secrets Lambda Extension (localhost HTTP, no SDK).
+     * The extension caches reads (default TTL 5 min), so a rotated secret
+     * propagates without a redeploy. It only serves requests during
+     * invocations — do not call this from static initialization.
+     */
+    private static String clientSecret(String ssmParameterKey) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(
+                        "http://localhost:2773/systemsmanager/parameters/get"
+                                + "?withDecryption=true&name=" + LambdaUtils.urlEncode(ssmParameterKey)))
+                .header("X-Aws-Parameters-Secrets-Token", System.getenv("AWS_SESSION_TOKEN"))
+                .build();
+        HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException("reading " + ssmParameterKey
+                    + " from parameter store failed: HTTP " + response.statusCode());
+        }
+        return MAPPER.readTree(response.body()).path("Parameter").path("Value").asText();
     }
 
 }

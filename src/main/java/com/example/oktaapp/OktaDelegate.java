@@ -21,19 +21,14 @@ import java.util.Map;
 public class OktaDelegate {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-
-
     private static final String TOKEN_COOKIE = "okta_token";
     private static final String STATE_COOKIE = "oauth_state";
     private static final String CALLBACK_PATH = "/callback";
-
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();
 
     private final AccessTokenVerifier verifier;
-
-
     private final String oktaIssuer;
     private final String oktaWebClientId;
     private final String oktaWebClientSecret;
@@ -44,8 +39,7 @@ public class OktaDelegate {
         this.oktaWebClientId = oktaWebClientId;
         this.oktaWebClientSecret = oktaWebClientSecret;
         this.oktaScopes = oktaScopes;
-
-        verifier = JwtVerifiers.accessTokenVerifierBuilder()
+        this.verifier = JwtVerifiers.accessTokenVerifierBuilder()
                 .setIssuer(oktaIssuer)
                 .setAudience(oktaAudience)
                 .setConnectionTimeout(Duration.ofSeconds(5))
@@ -62,17 +56,10 @@ public class OktaDelegate {
      */
     public Map<String, Object> unauthenticated(Map<String, Object> event, Context context) {
         String path = (String) LambdaUtils.asMap(LambdaUtils.asMap(event.get("requestContext")).get("http")).get("path");
-
         if (CALLBACK_PATH.equals(path)) {
             return callback(event, context);
         }
-        if (LambdaUtils.acceptsHtml(event) && oidcConfigured()) {
-            return redirectToOkta(event, path);
-        }
-        return LambdaUtils.response(401,
-                Map.of("content-type", "application/json",
-                        "www-authenticate", "Bearer realm=\"okta-app-lambda\""),
-                "{\"error\":\"unauthorized\",\"message\":\"a valid Okta bearer token is required\"}");
+        return redirectToOkta(event, path);
     }
 
     /** Sends the browser to Okta, remembering where it wanted to go in the state cookie. */
@@ -117,7 +104,7 @@ public class OktaDelegate {
             HttpRequest request = HttpRequest.newBuilder(URI.create(this.oktaIssuer + "/v1/token"))
                     .header("content-type", "application/x-www-form-urlencoded")
                     .header("authorization", "Basic " + Base64.getEncoder().encodeToString(
-                            (oktaWebClientId + ":" + clientSecret()).getBytes(StandardCharsets.UTF_8)))
+                            (oktaWebClientId + ":" + oktaWebClientSecret).getBytes(StandardCharsets.UTF_8)))
                     .POST(HttpRequest.BodyPublishers.ofString(
                             "grant_type=authorization_code"
                                     + "&code=" + LambdaUtils.urlEncode(code)
@@ -152,34 +139,5 @@ public class OktaDelegate {
                                 + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=" + maxAge,
                         STATE_COOKIE + "=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0"));
     }
-
-    private boolean oidcConfigured() {
-        return oktaWebClientId != null && !oktaWebClientId.isEmpty()
-                && oktaWebClientSecret != null && !oktaWebClientSecret.isEmpty()
-                && oktaScopes != null && !oktaScopes.isEmpty();
-    }
-
-    /**
-     * The web app's client secret, from SSM Parameter Store via the AWS
-     * Parameters and Secrets Lambda Extension (localhost HTTP, no SDK).
-     * The extension caches reads (default TTL 5 min), so a rotated secret
-     * propagates without a redeploy. It only serves requests during
-     * invocations — do not call this from static initialization.
-     */
-    private String clientSecret() throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(
-                        "http://localhost:2773/systemsmanager/parameters/get"
-                                + "?withDecryption=true&name=" + LambdaUtils.urlEncode(oktaWebClientSecret)))
-                .header("X-Aws-Parameters-Secrets-Token", System.getenv("AWS_SESSION_TOKEN"))
-                .build();
-        HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() != 200) {
-            throw new IllegalStateException("reading " + oktaWebClientSecret
-                    + " from parameter store failed: HTTP " + response.statusCode());
-        }
-        return MAPPER.readTree(response.body()).path("Parameter").path("Value").asText();
-    }
-
-
 
 }

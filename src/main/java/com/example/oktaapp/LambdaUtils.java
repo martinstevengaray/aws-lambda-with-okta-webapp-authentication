@@ -18,15 +18,6 @@ public class LambdaUtils {
         return "https://" + domain + CALLBACK_PATH;
     }
 
-    public static boolean acceptsHtml(Map<String, Object> event) {
-        for (Map.Entry<String, Object> entry : asMap(event.get("headers")).entrySet()) {
-            if ("accept".equalsIgnoreCase(entry.getKey()) && entry.getValue() instanceof String s) {
-                return s.contains("text/html");
-            }
-        }
-        return false;
-    }
-
     public static String bearerToken(Map<String, Object> event) {
         for (Map.Entry<String, Object> entry : asMap(event.get("headers")).entrySet()) {
             if ("authorization".equalsIgnoreCase(entry.getKey())
