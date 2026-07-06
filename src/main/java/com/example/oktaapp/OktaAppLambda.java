@@ -47,7 +47,7 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
     private static final String ISSUER = System.getenv("OKTA_ISSUER");
     private static final String CLIENT_ID = System.getenv("OKTA_CLIENT_ID");
     private static final String CLIENT_SECRET = System.getenv("OKTA_CLIENT_SECRET");
-    private static final String SCOPES = "openid profile echo";
+    private static final String SCOPES = "okta-lambda-client-scope";
 
     private static final String TOKEN_COOKIE = "okta_token";
     private static final String STATE_COOKIE = "oauth_state";

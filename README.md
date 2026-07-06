@@ -15,10 +15,16 @@ signature, `iss`/`aud`/`exp` checks); anything else gets a `401`.
    Authorization Servers — the built-in `default` works). The issuer looks like
    `https://<org>.okta.com/oauth2/default`. Tokens from the *org* authorization server
    (`https://<org>.okta.com`) are opaque and will be rejected.
-2. Create an app integration that can obtain access tokens from that server (e.g. an
-   **API Services / client-credentials** app for machine callers, or your existing SSO app
-   for user flows). Note the client ID/secret.
-3. The default audience of the `default` server is `api://default`; if yours differs, set
+2. For machine callers (e.g. `client-curl.sh`): create an **API Services**
+   (client-credentials) app integration. Note its client ID/secret.
+3. For the browser sign-in flow: create a separate **Web Application** app integration —
+   `service`-type apps are not allowed to access the `/authorize` endpoint. Use grant type
+   **Authorization Code**, set the sign-in redirect URI to
+   `https://<function-url>/callback`, and assign your users/groups to the app. Note its
+   client ID/secret.
+4. Make sure the scope the Lambda requests (`SCOPES` in `OktaAppLambda.java`) exists as a
+   custom scope on the authorization server, and that its access policies allow both apps.
+5. The default audience of the `default` server is `api://default`; if yours differs, set
    `okta_audience` accordingly.
 
 ## Build
@@ -39,10 +45,12 @@ gitignored, so account- and org-specific values never land in the repo) with
 your raw org values:
 
 ```sh
-export OKTA_URL_PREFIX="<org>"           # e.g. integrator-1234567
-export CLIENT_ID="<client id>"           # Okta Web Application app (browser OIDC flow)
+export OKTA_URL_PREFIX="<org>"            # e.g. integrator-1234567
+export CLIENT_ID="<client id>"            # API Services app (client-credentials, client-curl.sh)
 export CLIENT_SECRET="<client secret>"
-export AWS_ACCOUNT_ID="<account id>"     # names the tfstate-<account id> state bucket
+export WEB_CLIENT_ID="<client id>"        # Web Application app (browser OIDC flow;
+export WEB_CLIENT_SECRET="<client secret>"  # empty/unset deploys with the flow disabled)
+export AWS_ACCOUNT_ID="<account id>"      # names the tfstate-<account id> state bucket
 ```
 
 `deploy.sh` sources this file and derives the Terraform inputs from it, exported
