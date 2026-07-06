@@ -5,8 +5,6 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.okta.jwt.Jwt;
 import com.okta.jwt.JwtVerificationException;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -29,10 +27,13 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
         Jwt jwt;
         try {
             jwt = oktaDelegate.readJwt(event);
+            return createSuccessResponse(event, jwt, context);
         } catch (JwtVerificationException e) {
             return oktaDelegate.unauthenticated(event, context);
         }
+    }
 
+    private Map<String, Object> createSuccessResponse(Map<String, Object> event, Jwt jwt, Context context) {
         Map<String, Object> response = new LinkedHashMap<>();
         Map<String, Object> http = JsonUtils.getNestedMap(event, "requestContext", "http");
         Map<String, Object> headers = JsonUtils.getNestedMap(event,  "headers");
@@ -42,29 +43,11 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
         response.put("userAgent", http.get("userAgent"));
         response.put("queryStringParameters", event.get("queryStringParameters"));
         response.put("headers", headers);
-        response.put("body", decodeBody(event));
+        response.put("body", event.get("body"));
         response.put("requestId", context.getAwsRequestId());
-        response.put("caller", callerInfo(jwt.getClaims()));
-
+        response.put("jwtClaims", jwt.getClaims());
         return HttpUtils.response(200, Map.of("content-type", "application/json"),
                 JsonUtils.toString(response));
-    }
-
-    private static Map<String, Object> callerInfo(Map<String, Object> claims) {
-        Map<String, Object> caller = new LinkedHashMap<>();
-        caller.put("sub", claims.get("sub"));
-        if (claims.containsKey("cid")) {
-            caller.put("cid", claims.get("cid"));
-        }
-        return caller;
-    }
-
-    private static Object decodeBody(Map<String, Object> event) {
-        Object body = event.get("body");
-        if (body instanceof String s && Boolean.TRUE.equals(event.get("isBase64Encoded"))) {
-            return new String(Base64.getDecoder().decode(s), StandardCharsets.UTF_8);
-        }
-        return body;
     }
 
 }

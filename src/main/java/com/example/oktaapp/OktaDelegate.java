@@ -89,7 +89,7 @@ public class OktaDelegate {
         return null;
     }
 
-    // Sends the browser to Okta, remembering where it wanted to go in the state cookie.
+    // Redirects browser to Okta, remembering where it wanted to go in the state cookie.
     private Map<String, Object> redirectToOkta(Map<String, Object> event, String path) {
         byte[] randomTokenBytes = new byte[24];
         secureRandom.nextBytes(randomTokenBytes);
@@ -104,7 +104,6 @@ public class OktaDelegate {
                 + "&scope=" + HttpUtils.urlEncode(oktaScopes)
                 + "&redirect_uri=" + HttpUtils.urlEncode(redirectUri)
                 + "&state=" + state;
-
         return HttpUtils.response(302, Map.of("location", authorizeUrl), "",
                 List.of(OATH_STATE_COOKIE + "=" + state + "." + original
                         + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=300"));
@@ -114,7 +113,7 @@ public class OktaDelegate {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
-    // Exchanges the authorization code for an access token and stores it in the session cookie.
+    // Exchanges the authorization code for an access token, stores it in a session cookie, then redirect back to self.
     private Map<String, Object> callback(Map<String, Object> event, Context context) {
         final String error = JsonUtils.getNestedField(event, "queryStringParameters", "error");
         if (error != null) {

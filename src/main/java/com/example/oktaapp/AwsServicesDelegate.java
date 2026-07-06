@@ -1,7 +1,5 @@
 package com.example.oktaapp;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -10,12 +8,9 @@ import java.time.Duration;
 
 public class AwsServicesDelegate {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper(); //todo move out
-
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();
-
 
     public static String fetchSmmParameterValue(String ssmParameterKey) {
         HttpRequest request = HttpRequest.newBuilder(URI.create(
