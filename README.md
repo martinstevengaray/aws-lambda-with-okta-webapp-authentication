@@ -75,23 +75,18 @@ Terraform state lives in `s3://tfstate-<account id>/okta-app-lambda/terraform.tf
 
 ## Configuration
 
-Create `local/export_variables.sh` (the `local/` directory is gitignored, so org- and
+Create `local/config.sh` (the `local/` directory is gitignored, so org- and
 account-specific values never land in the repo):
 
 ```sh
-export OKTA_URL_PREFIX="<org>"                 # e.g. integrator-1234567
-export AWS_ACCOUNT_ID="<account id>"           # names the tfstate-<account id> state bucket
-
-# API Services app (client-credentials) — used by client-curl.sh
-export OKTA_API_CLIENT_ID="<client id>"
+export OKTA_URL_PREFIX="<org>"                    # e.g. integrator-1234567
+export OKTA_API_CLIENT_ID="<client id>"           # API Services app (client-credentials, client-curl.sh)
 export OKTA_API_CLIENT_SECRET="<client secret>"
-
-# Web Application app — browser OIDC flow (leave empty to deploy with the flow disabled)
-export OKTA_WEB_CLIENT_ID="<client id>"
-export OKTA_WEB_CLIENT_SECRET="<client secret>" # NOT read by Terraform — pushed to SSM
-
-export OKTA_SCOPES="<scope>"                     # custom scope both flows request
-export AWS_LAMBDA_URL="<function url>"           # set after first deploy; used by client-curl.sh
+export OKTA_WEB_CLIENT_ID="<client id>"           # Web Application app (browser OIDC flow; empty disables it)
+export OKTA_WEB_CLIENT_SECRET="<client secret>"   # NOT read by Terraform — pushed to SSM
+export OKTA_SCOPES="<scope>"                       # custom scope both flows request
+export AWS_LAMBDA_URL="<function url>"             # set after first deploy; used by client-curl.sh
+export AWS_ACCOUNT_ID="<account id>"               # names the tfstate-<account id> state bucket
 ```
 
 `deploy.sh` sources this file and derives the Terraform inputs, exporting them as `TF_VAR_*`
@@ -130,12 +125,12 @@ under `lib/`.
 ./deploy.sh              # extra args are passed to `terraform apply`, e.g. ./deploy.sh -auto-approve
 ```
 
-`deploy.sh` builds the zip, sources `local/export_variables.sh`, and runs `terraform apply`.
+`deploy.sh` builds the zip, sources `local/config.sh`, and runs `terraform apply`.
 On the first run it initializes the S3 backend with
 `terraform init -backend-config="bucket=tfstate-$AWS_ACCOUNT_ID"`; init is skipped once
 `terraform/.terraform/` exists (delete that directory to force a re-init after a backend or
 provider change). Outputs include `function_url` — set it as `AWS_LAMBDA_URL` in
-`local/export_variables.sh` for `client-curl.sh`, and register `<function_url>/callback` as
+`local/config.sh` for `client-curl.sh`, and register `<function_url>/callback` as
 the Web app's sign-in redirect URI in Okta.
 
 ### Web client secret (SSM Parameter Store)

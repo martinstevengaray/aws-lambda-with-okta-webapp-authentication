@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 VERSION=$(./gradlew -q printVersion)
 
 # Raw org-specific values (OKTA_URL_PREFIX, OKTA_WEB_CLIENT_ID/SECRET, AWS_ACCOUNT_ID, ...).
-source local/export_variables.sh
+source local/config.sh
 
 # Terraform reads TF_VAR_<name> env vars as input variables (see terraform/variables.tf).
 # The browser OIDC flow needs a "Web Application" Okta app (OKTA_WEB_CLIENT_ID); the
