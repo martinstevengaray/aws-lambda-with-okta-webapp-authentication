@@ -13,10 +13,10 @@ public class LambdaUtils {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String CALLBACK_PATH = "/callback";
 
-    public static String redirectUri(Map<String, Object> event) {
-        String domain = (String) asMap(event.get("requestContext")).get("domainName");
-        return "https://" + domain + CALLBACK_PATH;
-    }
+//    public static String redirectUri(Map<String, Object> event) {
+//        String domain = (String) asMap(event.get("requestContext")).get("domainName");
+//        return "https://" + domain + CALLBACK_PATH;
+//    }
 
     public static String bearerToken(Map<String, Object> event) {
         for (Map.Entry<String, Object> entry : asMap(event.get("headers")).entrySet()) {
@@ -29,11 +29,12 @@ public class LambdaUtils {
         return null;
     }
 
-    public static String cookieValue(Map<String, Object> event, String name) {
+    //http util
+    public static String readCookieValue(Map<String, Object> event, String cookieName) {
         if (event.get("cookies") instanceof List<?> cookies) {
             for (Object cookie : cookies) {
-                if (cookie instanceof String s && s.startsWith(name + "=")) {
-                    return s.substring(name.length() + 1);
+                if (cookie instanceof String s && s.startsWith(cookieName + "=")) {
+                    return s.substring(cookieName.length() + 1);
                 }
             }
         }
@@ -56,6 +57,7 @@ public class LambdaUtils {
         return redacted;
     }
 
+    //html formatter
     public static Map<String, Object> htmlError(int statusCode, String message) {
         return response(statusCode, Map.of("content-type", "text/html; charset=utf-8"),
                 "<!DOCTYPE html><html><body><h1>Sign-in problem</h1><p>"

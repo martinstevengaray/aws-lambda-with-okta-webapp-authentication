@@ -60,7 +60,7 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
         try {
             String token = LambdaUtils.bearerToken(event);
             if (token == null) {
-                token = LambdaUtils.cookieValue(event, TOKEN_COOKIE);
+                token = LambdaUtils.readCookieValue(event, TOKEN_COOKIE);
             }
             if (token == null) {
                 throw new JwtVerificationException("missing bearer token");
