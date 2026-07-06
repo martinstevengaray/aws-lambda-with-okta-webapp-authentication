@@ -9,4 +9,4 @@ tfplan
 *.class
 .idea/
 .vscode/
-local/
+local/export_variables.sh
