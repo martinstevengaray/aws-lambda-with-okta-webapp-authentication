@@ -48,9 +48,9 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
     public Map<String, Object> handleRequest(Map<String, Object> event, Context context) {
         Jwt jwt;
         try {
-            String token = OktaDelegate.bearerToken(event);
+            String token = LambdaUtils.bearerToken(event);
             if (token == null) {
-                token = OktaDelegate.cookieValue(event, TOKEN_COOKIE);
+                token = LambdaUtils.cookieValue(event, TOKEN_COOKIE);
             }
             if (token == null) {
                 throw new JwtVerificationException("missing bearer token");
@@ -63,24 +63,24 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
 
         Map<String, Object> echo = new LinkedHashMap<>();
 
-        Map<String, Object> requestContext = OktaDelegate.asMap(event.get("requestContext"));
-        Map<String, Object> http = OktaDelegate.asMap(requestContext.get("http"));
+        Map<String, Object> requestContext = LambdaUtils.asMap(event.get("requestContext"));
+        Map<String, Object> http = LambdaUtils.asMap(requestContext.get("http"));
 
         echo.put("method", http.get("method"));
         echo.put("path", http.get("path"));
         echo.put("sourceIp", http.get("sourceIp"));
         echo.put("userAgent", http.get("userAgent"));
         echo.put("queryStringParameters", event.get("queryStringParameters"));
-        echo.put("headers", OktaDelegate.redactAuthorization(OktaDelegate.asMap(event.get("headers"))));
-        echo.put("body", OktaDelegate.decodeBody(event));
+        echo.put("headers", LambdaUtils.redactAuthorization(LambdaUtils.asMap(event.get("headers"))));
+        echo.put("body", LambdaUtils.decodeBody(event));
         echo.put("requestId", context.getAwsRequestId());
-        echo.put("caller", OktaDelegate.callerInfo(jwt.getClaims()));
+        echo.put("caller", LambdaUtils.callerInfo(jwt.getClaims()));
 
         try {
-            return OktaDelegate.response(200, Map.of("content-type", "application/json"),
+            return LambdaUtils.response(200, Map.of("content-type", "application/json"),
                     MAPPER.writeValueAsString(echo));
         } catch (Exception e) {
-            return OktaDelegate.response(500, Map.of("content-type", "application/json"),
+            return LambdaUtils.response(500, Map.of("content-type", "application/json"),
                     "{\"error\":\"failed to serialize echo response\"}");
         }
     }
