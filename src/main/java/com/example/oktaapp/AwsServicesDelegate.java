@@ -20,7 +20,7 @@ public class AwsServicesDelegate {
     public static String fetchSmmParameterValue(String ssmParameterKey) {
         HttpRequest request = HttpRequest.newBuilder(URI.create(
                         "http://localhost:2773/systemsmanager/parameters/get"
-                                + "?withDecryption=true&name=" + LambdaUtils.urlEncode(ssmParameterKey)))
+                                + "?withDecryption=true&name=" + HttpUtils.urlEncode(ssmParameterKey)))
                 .header("X-Aws-Parameters-Secrets-Token", System.getenv("AWS_SESSION_TOKEN"))
                 .build();
         HttpResponse<String> response;

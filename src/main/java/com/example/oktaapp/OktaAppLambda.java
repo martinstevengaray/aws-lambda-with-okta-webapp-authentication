@@ -34,19 +34,19 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
         }
 
         Map<String, Object> response = new LinkedHashMap<>();
-        Map<String, Object> requestContext = LambdaUtils.asMap(event.get("requestContext"));
-        Map<String, Object> http = LambdaUtils.asMap(requestContext.get("http"));
+        Map<String, Object> http = JsonUtils.getNestedMap(event, "requestContext", "http");
+        Map<String, Object> headers = JsonUtils.getNestedMap(event,  "headers");
         response.put("method", http.get("method"));
         response.put("path", http.get("path"));
         response.put("sourceIp", http.get("sourceIp"));
         response.put("userAgent", http.get("userAgent"));
         response.put("queryStringParameters", event.get("queryStringParameters"));
-        response.put("headers", redactAuthorization(LambdaUtils.asMap(event.get("headers"))));
+        response.put("headers", headers);
         response.put("body", decodeBody(event));
         response.put("requestId", context.getAwsRequestId());
         response.put("caller", callerInfo(jwt.getClaims()));
 
-        return LambdaUtils.response(200, Map.of("content-type", "application/json"),
+        return HttpUtils.response(200, Map.of("content-type", "application/json"),
                 JsonUtils.toString(response));
     }
 
@@ -57,12 +57,6 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
             caller.put("cid", claims.get("cid"));
         }
         return caller;
-    }
-
-    private static Map<String, Object> redactAuthorization(Map<String, Object> headers) {
-        Map<String, Object> redacted = new LinkedHashMap<>(headers);
-        redacted.replaceAll((name, value) -> "authorization".equalsIgnoreCase(name) ? "<redacted>" : value);
-        return redacted;
     }
 
     private static Object decodeBody(Map<String, Object> event) {

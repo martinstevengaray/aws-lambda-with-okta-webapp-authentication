@@ -68,7 +68,7 @@ public class OktaDelegate {
     }
 
     private String readBearerToken(Map<String, Object> event) {
-        for (Map.Entry<String, Object> entry : LambdaUtils.asMap(event.get("headers")).entrySet()) {
+        for (Map.Entry<String, Object> entry : JsonUtils.getNestedMap(event, "headers").entrySet()) {
             if ("authorization".equalsIgnoreCase(entry.getKey())
                     && entry.getValue() instanceof String s
                     && s.regionMatches(true, 0, "Bearer ", 0, 7)) {
@@ -99,13 +99,13 @@ public class OktaDelegate {
         String domainName = JsonUtils.getNestedField(event,"requestContext", "domainName");
         String redirectUri = "https://" + domainName + CALLBACK_PATH;
         String authorizeUrl = this.oktaIssuer + "/v1/authorize"
-                + "?client_id=" + LambdaUtils.urlEncode(oktaWebClientId)
+                + "?client_id=" + HttpUtils.urlEncode(oktaWebClientId)
                 + "&response_type=code"
-                + "&scope=" + LambdaUtils.urlEncode(oktaScopes)
-                + "&redirect_uri=" + LambdaUtils.urlEncode(redirectUri)
+                + "&scope=" + HttpUtils.urlEncode(oktaScopes)
+                + "&redirect_uri=" + HttpUtils.urlEncode(redirectUri)
                 + "&state=" + state;
 
-        return LambdaUtils.response(302, Map.of("location", authorizeUrl), "",
+        return HttpUtils.response(302, Map.of("location", authorizeUrl), "",
                 List.of(OATH_STATE_COOKIE + "=" + state + "." + original
                         + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=300"));
     }
@@ -120,13 +120,13 @@ public class OktaDelegate {
         if (error != null) {
             String errorDescription = JsonUtils.getNestedField(event, "queryStringParameters", "error_description");
             context.getLogger().log("Okta sign-in failed: " + error + " — " + errorDescription);
-            return LambdaUtils.htmlError(400, "Okta sign-in failed");
+            return HttpUtils.htmlError(400, "Okta sign-in failed");
         }
         final String code = JsonUtils.getNestedField(event, "queryStringParameters", "code");
         final String state = JsonUtils.getNestedField(event, "queryStringParameters", "state");
         final String oathStateCookie = readCookieValue(event, OATH_STATE_COOKIE);
         if (code == null || state == null || oathStateCookie == null || !oathStateCookie.startsWith(state + ".")) {
-            return LambdaUtils.htmlError(400, "Login state mismatch, retry.");
+            return HttpUtils.htmlError(400, "Login state mismatch, retry.");
         }
         //verify "code" in queryStringParameters to retrieve an accessToken for client
         final String domainName = JsonUtils.getNestedField(event,"requestContext", "domainName");
@@ -139,30 +139,30 @@ public class OktaDelegate {
                             (oktaWebClientId + ":" + oktaWebClientSecret).getBytes(StandardCharsets.UTF_8)))
                     .POST(HttpRequest.BodyPublishers.ofString(
                             "grant_type=authorization_code"
-                                    + "&code=" + LambdaUtils.urlEncode(code)
-                                    + "&redirect_uri=" + LambdaUtils.urlEncode(redirectUri)))
+                                    + "&code=" + HttpUtils.urlEncode(code)
+                                    + "&redirect_uri=" + HttpUtils.urlEncode(redirectUri)))
                     .build();
             response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
                 context.getLogger().log("token exchange failed: " + response.body());
-                return LambdaUtils.htmlError(502, "Token exchange with Okta failed");
+                return HttpUtils.htmlError(502, "Token exchange with Okta failed");
             }
         } catch (Exception e) {
             context.getLogger().log("token exchange failed: " + e);
-            return LambdaUtils.htmlError(502, "Could not reach Okta to complete sign-in.");
+            return HttpUtils.htmlError(502, "Could not reach Okta to complete sign-in.");
         }
         String accessToken = JsonUtils.getNestedField(response.body(), "access_token");
         try {
             verifier.decode(accessToken); // Verify once before trusting the cookie to avoid a redirect loop
         } catch (JwtVerificationException e) {
             context.getLogger().log("token from Okta failed verification: " + e.getMessage());
-            return LambdaUtils.htmlError(500, "Okta issued a token this service could not verify.");
+            return HttpUtils.htmlError(500, "Okta issued a token this service could not verify.");
         }
         String originallyRequestedUrl = new String(
                 Base64.getUrlDecoder().decode(oathStateCookie.substring(state.length() + 1)),
                 StandardCharsets.UTF_8);
         Integer maxAge =  JsonUtils.getNestedField(response.body(), "expires_in");
-        return LambdaUtils.response(302, Map.of("location", originallyRequestedUrl), "", List.of(
+        return HttpUtils.response(302, Map.of("location", originallyRequestedUrl), "", List.of(
                 OKTA_TOKEN_COOKIE + "=" + accessToken + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=" + maxAge,
                 OATH_STATE_COOKIE + "=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0")); //clear out oath cookie
     }

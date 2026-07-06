@@ -20,6 +20,7 @@ public class JsonUtils {
         }
     }
 
+    @SuppressWarnings("unchecked")
     public static <T>  T getNestedField(Map<String, Object> objectMap, String... path) {
         try {
             for (int i = 0; i < path.length - 1; i++) {
@@ -29,6 +30,12 @@ public class JsonUtils {
         } catch (ClassCastException | NullPointerException e) {
             return null; //key not available on objectMap
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object> getNestedMap(Map<String, Object> objectMap, String... path) {
+        Map<String, Object> nestedMap = getNestedField(objectMap, path);
+        return (nestedMap != null) ? nestedMap : Map.of();
     }
 
     public static <T> T getNestedField(String jsonString, String... path) {

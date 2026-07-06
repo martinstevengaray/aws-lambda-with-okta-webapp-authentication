@@ -6,9 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class LambdaUtils {
+public class HttpUtils {
 
-    //html util
     public static Map<String, Object> htmlError(int statusCode, String message) {
         return response(statusCode, Map.of("content-type", "text/html; charset=utf-8"),
                 "<!DOCTYPE html><html><body><h1>Sign-in problem</h1><p>"
@@ -33,11 +32,6 @@ public class LambdaUtils {
 
     public static String urlEncode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
-    }
-
-    @SuppressWarnings("unchecked")
-    public static Map<String, Object> asMap(Object value) {
-        return value instanceof Map ? (Map<String, Object>) value : Map.of();
     }
 
 }
