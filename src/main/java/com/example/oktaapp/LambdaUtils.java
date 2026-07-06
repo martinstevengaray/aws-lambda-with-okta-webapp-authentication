@@ -2,51 +2,11 @@ package com.example.oktaapp;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class LambdaUtils {
-
-    public static String bearerToken(Map<String, Object> event) {
-        for (Map.Entry<String, Object> entry : asMap(event.get("headers")).entrySet()) {
-            if ("authorization".equalsIgnoreCase(entry.getKey())
-                    && entry.getValue() instanceof String s
-                    && s.regionMatches(true, 0, "Bearer ", 0, 7)) {
-                return s.substring(7).trim();
-            }
-        }
-        return null;
-    }
-
-    //http util
-    public static String readCookieValue(Map<String, Object> event, String cookieName) {
-        if (event.get("cookies") instanceof List<?> cookies) {
-            for (Object cookie : cookies) {
-                if (cookie instanceof String s && s.startsWith(cookieName + "=")) {
-                    return s.substring(cookieName.length() + 1);
-                }
-            }
-        }
-        return null;
-    }
-
-    public static Map<String, Object> callerInfo(Map<String, Object> claims) {
-        Map<String, Object> caller = new LinkedHashMap<>();
-        caller.put("sub", claims.get("sub"));
-        if (claims.containsKey("cid")) {
-            caller.put("cid", claims.get("cid"));
-        }
-        return caller;
-    }
-
-    public static Map<String, Object> redactAuthorization(Map<String, Object> headers) {
-        Map<String, Object> redacted = new LinkedHashMap<>(headers);
-        redacted.replaceAll((name, value) ->
-                "authorization".equalsIgnoreCase(name) ? "<redacted>" : value);
-        return redacted;
-    }
 
     //html util
     public static Map<String, Object> htmlError(int statusCode, String message) {
@@ -71,20 +31,8 @@ public class LambdaUtils {
         return response;
     }
 
-    public static String base64Url(byte[] bytes) {
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
     public static String urlEncode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
-    }
-
-    public static Object decodeBody(Map<String, Object> event) {
-        Object body = event.get("body");
-        if (body instanceof String s && Boolean.TRUE.equals(event.get("isBase64Encoded"))) {
-            return new String(Base64.getDecoder().decode(s), StandardCharsets.UTF_8);
-        }
-        return body;
     }
 
     @SuppressWarnings("unchecked")

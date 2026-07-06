@@ -52,17 +52,13 @@ public class OktaDelegate {
     }
 
     public Jwt readJwt(Map<String, Object> event) throws JwtVerificationException {
-        String token = LambdaUtils.bearerToken(event);
+        String token = readBearerToken(event);
         if (token == null) {
-            token = LambdaUtils.readCookieValue(event, OKTA_TOKEN_COOKIE);
+            token = readCookieValue(event, OKTA_TOKEN_COOKIE);
         }
         return verifier.decode(token);
     }
 
-    /**
-     * No valid token: finish the OIDC flow on /callback, start it for
-     * browsers, and keep the plain 401 for API clients.
-     */
     public Map<String, Object> unauthenticated(Map<String, Object> event, Context context) {
         String path = JsonUtils.getNestedField(event, "requestContext", "http", "path");
         if (!CALLBACK_PATH.equals(path)) {
@@ -71,13 +67,35 @@ public class OktaDelegate {
         return callback(event, context);
     }
 
-    /** Sends the browser to Okta, remembering where it wanted to go in the state cookie. */
+    private String readBearerToken(Map<String, Object> event) {
+        for (Map.Entry<String, Object> entry : LambdaUtils.asMap(event.get("headers")).entrySet()) {
+            if ("authorization".equalsIgnoreCase(entry.getKey())
+                    && entry.getValue() instanceof String s
+                    && s.regionMatches(true, 0, "Bearer ", 0, 7)) {
+                return s.substring(7).trim();
+            }
+        }
+        return null;
+    }
+
+    private String readCookieValue(Map<String, Object> event, String cookieName) {
+        if (event.get("cookies") instanceof List<?> cookies) {
+            for (Object cookie : cookies) {
+                if (cookie instanceof String s && s.startsWith(cookieName + "=")) {
+                    return s.substring(cookieName.length() + 1);
+                }
+            }
+        }
+        return null;
+    }
+
+    // Sends the browser to Okta, remembering where it wanted to go in the state cookie.
     private Map<String, Object> redirectToOkta(Map<String, Object> event, String path) {
         byte[] randomTokenBytes = new byte[24];
         secureRandom.nextBytes(randomTokenBytes);
-        String state = LambdaUtils.base64Url(randomTokenBytes);
+        String state = base64Url(randomTokenBytes);
         String rawQuery = event.get("rawQueryString") instanceof String q && !q.isEmpty() ? "?" + q : "";
-        String original = LambdaUtils.base64Url((path + rawQuery).getBytes(StandardCharsets.UTF_8));
+        String original = base64Url((path + rawQuery).getBytes(StandardCharsets.UTF_8));
         String domainName = JsonUtils.getNestedField(event,"requestContext", "domainName");
         String redirectUri = "https://" + domainName + CALLBACK_PATH;
         String authorizeUrl = this.oktaIssuer + "/v1/authorize"
@@ -92,7 +110,11 @@ public class OktaDelegate {
                         + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=300"));
     }
 
-    /** Exchanges the authorization code for an access token and stores it in the session cookie. */
+    private String base64Url(byte[] bytes) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    // Exchanges the authorization code for an access token and stores it in the session cookie.
     private Map<String, Object> callback(Map<String, Object> event, Context context) {
         final String error = JsonUtils.getNestedField(event, "queryStringParameters", "error");
         if (error != null) {
@@ -102,7 +124,7 @@ public class OktaDelegate {
         }
         final String code = JsonUtils.getNestedField(event, "queryStringParameters", "code");
         final String state = JsonUtils.getNestedField(event, "queryStringParameters", "state");
-        final String oathStateCookie = LambdaUtils.readCookieValue(event, OATH_STATE_COOKIE);
+        final String oathStateCookie = readCookieValue(event, OATH_STATE_COOKIE);
         if (code == null || state == null || oathStateCookie == null || !oathStateCookie.startsWith(state + ".")) {
             return LambdaUtils.htmlError(400, "Login state mismatch, retry.");
         }

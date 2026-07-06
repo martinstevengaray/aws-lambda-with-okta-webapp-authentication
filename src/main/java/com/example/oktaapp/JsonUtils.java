@@ -1,5 +1,7 @@
 package com.example.oktaapp;
 
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -10,6 +12,13 @@ public class JsonUtils {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    public static String toString(Object object) {
+        try {
+            return objectMapper.writeValueAsString(object);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public static <T>  T getNestedField(Map<String, Object> objectMap, String... path) {
         try {
@@ -27,7 +36,7 @@ public class JsonUtils {
             Map<String, Object> objectMap = objectMapper.readValue(jsonString, new TypeReference<Map<String, Object>>() {});
             return getNestedField(objectMap, path);
         } catch (Exception e) {
-            return null;
+            throw new RuntimeException(e);
         }
     }
 

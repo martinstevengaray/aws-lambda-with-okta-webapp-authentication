@@ -2,45 +2,15 @@ package com.example.oktaapp;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.okta.jwt.Jwt;
 import com.okta.jwt.JwtVerificationException;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Echoes back selected contents of a Lambda Function URL request
- * (API Gateway v2 HTTP event format). Two ways in:
- *
- *  - API clients send an Okta-issued bearer token; requests without
- *    a valid one get a 401.
- *  - Browsers (Accept: text/html) without a token are sent through the
- *    OIDC authorization-code flow: redirect to Okta, exchange the code
- *    at /callback, and store the access token in an HttpOnly session
- *    cookie. Requires OKTA_WEB_CLIENT_ID of a "Web Application" Okta app
- *    whose sign-in redirect URI is https://<function-url>/callback,
- *    OKTA_WEB_CLIENT_SECRET_PARAM naming the SSM parameter holding its
- *    client secret, and OKTA_SCOPES with the space-separated scopes to
- *    request.
- *
- * OKTA_ISSUER must be a custom authorization server (e.g.
- * https://org.okta.com/oauth2/default) — org authorization server
- * tokens are opaque and cannot be verified locally.
- */
 public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<String, Object>> {
-
-    private static final ObjectMapper MAPPER = new ObjectMapper(); //todo move out
-    private static final String TOKEN_COOKIE = "okta_token"; //todo move out
-
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
 
     private final OktaDelegate oktaDelegate;
 
@@ -48,9 +18,9 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
         String oktaIssuer = System.getenv("OKTA_ISSUER");
         String oktaAudience = System.getenv("OKTA_AUDIENCE");
         String oktaWebClientId = System.getenv("OKTA_WEB_CLIENT_ID");
-        String oktaWebClientSecretSsmParameterKey = System.getenv("OKTA_WEB_CLIENT_SECRET_SSM_PARAMETER_KEY");
-        String oktaWebClientSecret = clientSecret(oktaWebClientSecretSsmParameterKey);
         String oktaScopes = System.getenv("OKTA_SCOPES");
+        String oktaWebClientSecretSsmParameterKey = System.getenv("OKTA_WEB_CLIENT_SECRET_SSM_PARAMETER_KEY");
+        String oktaWebClientSecret = AwsServicesDelegate.fetchSmmParameterValue(oktaWebClientSecretSsmParameterKey);
         this.oktaDelegate = new OktaDelegate(oktaIssuer, oktaAudience, oktaWebClientId, oktaWebClientSecret, oktaScopes);
     }
 
@@ -63,47 +33,44 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
             return oktaDelegate.unauthenticated(event, context);
         }
 
-        Map<String, Object> echo = new LinkedHashMap<>();
+        Map<String, Object> response = new LinkedHashMap<>();
         Map<String, Object> requestContext = LambdaUtils.asMap(event.get("requestContext"));
         Map<String, Object> http = LambdaUtils.asMap(requestContext.get("http"));
-        echo.put("method", http.get("method"));
-        echo.put("path", http.get("path"));
-        echo.put("sourceIp", http.get("sourceIp"));
-        echo.put("userAgent", http.get("userAgent"));
-        echo.put("queryStringParameters", event.get("queryStringParameters"));
-        echo.put("headers", LambdaUtils.redactAuthorization(LambdaUtils.asMap(event.get("headers"))));
-        echo.put("body", LambdaUtils.decodeBody(event));
-        echo.put("requestId", context.getAwsRequestId());
-        echo.put("caller", LambdaUtils.callerInfo(jwt.getClaims()));
+        response.put("method", http.get("method"));
+        response.put("path", http.get("path"));
+        response.put("sourceIp", http.get("sourceIp"));
+        response.put("userAgent", http.get("userAgent"));
+        response.put("queryStringParameters", event.get("queryStringParameters"));
+        response.put("headers", redactAuthorization(LambdaUtils.asMap(event.get("headers"))));
+        response.put("body", decodeBody(event));
+        response.put("requestId", context.getAwsRequestId());
+        response.put("caller", callerInfo(jwt.getClaims()));
 
-        try {
-            return LambdaUtils.response(200, Map.of("content-type", "application/json"),
-                    MAPPER.writeValueAsString(echo));
-        } catch (Exception e) {
-            return LambdaUtils.response(500, Map.of("content-type", "application/json"),
-                    "{\"error\":\"failed to serialize echo response\"}");
-        }
+        return LambdaUtils.response(200, Map.of("content-type", "application/json"),
+                JsonUtils.toString(response));
     }
 
-    /**
-     * The web app's client secret, from SSM Parameter Store via the AWS
-     * Parameters and Secrets Lambda Extension (localhost HTTP, no SDK).
-     * The extension caches reads (default TTL 5 min), so a rotated secret
-     * propagates without a redeploy. It only serves requests during
-     * invocations — do not call this from static initialization.
-     */
-    private static String clientSecret(String ssmParameterKey) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(URI.create(
-                        "http://localhost:2773/systemsmanager/parameters/get"
-                                + "?withDecryption=true&name=" + LambdaUtils.urlEncode(ssmParameterKey)))
-                .header("X-Aws-Parameters-Secrets-Token", System.getenv("AWS_SESSION_TOKEN"))
-                .build();
-        HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() != 200) {
-            throw new IllegalStateException("reading " + ssmParameterKey
-                    + " from parameter store failed: HTTP " + response.statusCode());
+    private static Map<String, Object> callerInfo(Map<String, Object> claims) {
+        Map<String, Object> caller = new LinkedHashMap<>();
+        caller.put("sub", claims.get("sub"));
+        if (claims.containsKey("cid")) {
+            caller.put("cid", claims.get("cid"));
         }
-        return MAPPER.readTree(response.body()).path("Parameter").path("Value").asText();
+        return caller;
+    }
+
+    private static Map<String, Object> redactAuthorization(Map<String, Object> headers) {
+        Map<String, Object> redacted = new LinkedHashMap<>(headers);
+        redacted.replaceAll((name, value) -> "authorization".equalsIgnoreCase(name) ? "<redacted>" : value);
+        return redacted;
+    }
+
+    private static Object decodeBody(Map<String, Object> event) {
+        Object body = event.get("body");
+        if (body instanceof String s && Boolean.TRUE.equals(event.get("isBase64Encoded"))) {
+            return new String(Base64.getDecoder().decode(s), StandardCharsets.UTF_8);
+        }
+        return body;
     }
 
 }
