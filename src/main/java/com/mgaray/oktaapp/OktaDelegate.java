@@ -1,6 +1,8 @@
-package com.example.oktaapp;
+package com.mgaray.oktaapp;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.mgaray.oktaapp.common.HttpUtils;
+import com.mgaray.oktaapp.common.JsonUtils;
 import com.okta.jwt.AccessTokenVerifier;
 import com.okta.jwt.Jwt;
 import com.okta.jwt.JwtVerificationException;
@@ -59,7 +61,7 @@ public class OktaDelegate {
         return verifier.decode(token);
     }
 
-    public Map<String, Object> unauthenticated(Map<String, Object> event, Context context) {
+    public Map<String, Object> authenticationRedirects(Map<String, Object> event, Context context) {
         String path = JsonUtils.getNestedField(event, "requestContext", "http", "path");
         if (!CALLBACK_PATH.equals(path)) {
             return redirectToOkta(event, path);

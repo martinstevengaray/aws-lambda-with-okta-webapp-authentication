@@ -1,4 +1,4 @@
-package com.example.oktaapp;
+package com.mgaray.oktaapp.common;
 
 import java.net.URI;
 import java.net.http.HttpClient;

@@ -184,7 +184,7 @@ is redirected into the Okta sign-in flow when the web app is configured.
 ## Infrastructure notes
 
 - **Runtime:** `java21`, 512 MB, 30 s timeout; handler
-  `com.example.oktaapp.OktaAppLambda::handleRequest`.
+  `com.mgaray.oktaapp.OktaAppLambda::handleRequest`.
 - **Function URL:** `authorization_type = NONE` (auth is enforced in code, not by AWS IAM),
   with CORS allowing `authorization` and `content-type` headers. Adjust
   `aws_lambda_cors_allow_origins` (default `http://localhost:8080`) for your front end.

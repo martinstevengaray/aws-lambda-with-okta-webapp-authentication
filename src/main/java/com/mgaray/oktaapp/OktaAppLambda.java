@@ -1,7 +1,10 @@
-package com.example.oktaapp;
+package com.mgaray.oktaapp;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.mgaray.oktaapp.common.AwsServicesDelegate;
+import com.mgaray.oktaapp.common.HttpUtils;
+import com.mgaray.oktaapp.common.JsonUtils;
 import com.okta.jwt.Jwt;
 import com.okta.jwt.JwtVerificationException;
 
@@ -29,7 +32,7 @@ public class OktaAppLambda implements RequestHandler<Map<String, Object>, Map<St
             jwt = oktaDelegate.readJwt(event);
             return createSuccessResponse(event, jwt, context);
         } catch (JwtVerificationException e) {
-            return oktaDelegate.unauthenticated(event, context);
+            return oktaDelegate.authenticationRedirects(event, context);
         }
     }
 
