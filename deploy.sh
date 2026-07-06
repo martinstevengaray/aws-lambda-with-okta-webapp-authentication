@@ -7,9 +7,11 @@ cd "$(dirname "$0")"
 ./gradlew build
 VERSION=$(./gradlew -q printVersion)
 
+# Sets AWS_ACCOUNT_ID and the TF_VAR_okta_* variables read by terraform.
+source local/export_variables.sh
+
 # Skipped once initialized — if the backend or providers change, delete terraform/.terraform to re-init.
 if [ ! -d terraform/.terraform ]; then
-  source local/export_variables.sh #to set AWS_ACCOUNT_ID
   terraform -chdir=terraform init -backend-config="bucket=tfstate-${AWS_ACCOUNT_ID}" -input=false
 fi
 

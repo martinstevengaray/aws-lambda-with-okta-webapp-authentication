@@ -34,18 +34,26 @@ The version is defined once in `build.gradle` and readable by tooling via
 
 ## Deploy
 
-One-time setup:
+One-time setup: create `local/export_variables.sh` (the `local/` directory is
+gitignored, so account- and org-specific values never land in the repo). It is
+sourced by `deploy.sh`, and Terraform reads any `TF_VAR_<name>` env var as the
+input variable `<name>`:
 
 ```sh
-cd terraform
-cp terraform.tfvars.example terraform.tfvars   # then fill in your issuer/audience
-cd ..
+export OKTA_URL_PREFIX="<org>"                 # e.g. integrator-1234567
+export AWS_ACCOUNT_ID="<account id>"           # names the tfstate-<account id> state bucket
+export TF_VAR_okta_issuer="https://${OKTA_URL_PREFIX}.okta.com/oauth2/default"
+export TF_VAR_okta_client_id="<client id>"     # optional: browser OIDC flow
+export TF_VAR_okta_client_secret="<client secret>"
 ```
 
-The state bucket name (`tfstate-<account id>`) is not hardcoded; on first run
-`deploy.sh` runs `terraform init -backend-config="bucket=tfstate-$ACCOUNT_ID"`,
-using `AWS_ACCOUNT_ID` if set and otherwise deriving the account ID from your
-current AWS credentials via `aws sts get-caller-identity`. Init is skipped once
+(A `terraform/terraform.tfvars` file is an optional alternative — see
+`terraform.tfvars.example` — but note tfvars values take precedence over
+`TF_VAR_*` env vars.)
+
+On first run `deploy.sh` runs
+`terraform init -backend-config="bucket=tfstate-$AWS_ACCOUNT_ID"`, so the state
+bucket name is not hardcoded either. Init is skipped once
 `terraform/.terraform/` exists; delete that directory to force a re-init (e.g.
 after a backend or provider change).
 

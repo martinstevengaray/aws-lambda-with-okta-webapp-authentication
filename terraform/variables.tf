@@ -16,7 +16,7 @@ variable "function_name" {
 }
 
 variable "okta_issuer" {
-  description = "Okta custom authorization server issuer, e.g. https://<org>.okta.com/oauth2/default (org-server tokens are opaque and cannot be verified)"
+  description = "Okta custom authorization server issuer, e.g. https://<org>.okta.com/oauth2/default (org-server tokens are opaque and cannot be verified). No default — set TF_VAR_okta_issuer or terraform.tfvars."
   type        = string
 }
 
