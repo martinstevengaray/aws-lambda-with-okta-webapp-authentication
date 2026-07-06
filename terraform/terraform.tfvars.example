@@ -1,9 +1,0 @@
-# Optional overrides. The normal config path is TF_VAR_* environment variables
-# set in local/export_variables.sh (sourced by deploy.sh) — only copy this to
-# terraform.tfvars if you want file-based values instead. Values here take
-# precedence over TF_VAR_* env vars.
-# Do NOT set app_version here — it comes from the Gradle build so it can't drift:
-#   terraform apply -var "app_version=$(cd .. && ./gradlew -q printVersion)"
-# The issuer must be a custom authorization server (org-server tokens are opaque).
-# okta_issuer   = "https://your-org.okta.com/oauth2/default"
-# okta_audience = "api://default"
