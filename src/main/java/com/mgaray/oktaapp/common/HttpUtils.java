@@ -30,6 +30,17 @@ public class HttpUtils {
         return response;
     }
 
+    public static String readCookieValue(Map<String, Object> event, String cookieName) {
+        if (event.get("cookies") instanceof List<?> cookies) {
+            for (Object cookie : cookies) {
+                if (cookie instanceof String s && s.startsWith(cookieName + "=")) {
+                    return s.substring(cookieName.length() + 1);
+                }
+            }
+        }
+        return null;
+    }
+
     public static String urlEncode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }

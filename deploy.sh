@@ -1,28 +1,25 @@
 #!/usr/bin/env bash
-# Build the Lambda zip and deploy it. Extra args are passed to `terraform apply`
-# (e.g. ./deploy.sh -auto-approve). One-time setup: see README "Deploy".
+#build lambda zip and then deploy infrastructure via terraform
+
 set -euo pipefail
 cd "$(dirname "$0")"
 
 ./gradlew build
 VERSION=$(./gradlew -q printVersion)
 
-# Raw org-specific values (OKTA_URL_PREFIX, OKTA_WEB_CLIENT_ID/SECRET, AWS_ACCOUNT_ID, ...).
-source local/config.sh
-
-# Terraform reads TF_VAR_<name> env vars as input variables (see terraform/variables.tf).
-# The browser OIDC flow needs a "Web Application" Okta app (OKTA_WEB_CLIENT_ID); the
-# OKTA_API_CLIENT_ID service app used by client-curl.sh cannot access /authorize.
-# Empty/unset OKTA_WEB_CLIENT_ID deploys with the browser flow disabled.
-# The web client secret is NOT passed through terraform — it lives in SSM
-# Parameter Store, pushed by ./deploy_secrets.sh (see README "Deploy").
+#load terraform variables from system config:
+#  OKTA_URL_PREFIX
+#  OKTA_WEB_CLIENT_ID  (client secret loaded via deploy.secrets.sh)
+#  OKTA_SCOPES
+#  TERRAFORM_TFSTATE_BUCKET
+source local/deployment-config.sh
 export TF_VAR_okta_issuer="https://${OKTA_URL_PREFIX}.okta.com/oauth2/default"
-export TF_VAR_okta_web_client_id="${OKTA_WEB_CLIENT_ID:-}"
-export TF_VAR_okta_scopes="${OKTA_SCOPES:-}"
+export TF_VAR_okta_web_client_id=${OKTA_WEB_CLIENT_ID}
+export TF_VAR_okta_scopes=${OKTA_SCOPES}
 
 # Skipped once initialized — if the backend or providers change, delete terraform/.terraform to re-init.
 if [ ! -d terraform/.terraform ]; then
-  terraform -chdir=terraform init -backend-config="bucket=tfstate-${AWS_ACCOUNT_ID}" -input=false
+  terraform -chdir=terraform init -backend-config="bucket=${TERRAFORM_TFSTATE_BUCKET}" -input=false
 fi
 
 terraform -chdir=terraform apply -var "app_version=$VERSION" "$@"

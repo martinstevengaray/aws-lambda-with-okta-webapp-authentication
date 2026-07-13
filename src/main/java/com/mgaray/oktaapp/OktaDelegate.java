@@ -57,7 +57,7 @@ public class OktaDelegate {
     public Jwt readJwt(Map<String, Object> event) throws JwtVerificationException {
         String token = readBearerToken(event);
         if (token == null) {
-            token = readCookieValue(event, OKTA_TOKEN_COOKIE);
+            token = HttpUtils.readCookieValue(event, OKTA_TOKEN_COOKIE);
         }
         return verifier.decode(token);
     }
@@ -70,34 +70,11 @@ public class OktaDelegate {
         return callback(event, context);
     }
 
-    private String readBearerToken(Map<String, Object> event) {
-        for (Map.Entry<String, Object> entry : JsonUtils.getNestedMap(event, "headers").entrySet()) {
-            if ("authorization".equalsIgnoreCase(entry.getKey())
-                    && entry.getValue() instanceof String s
-                    && s.regionMatches(true, 0, "Bearer ", 0, 7)) {
-                return s.substring(7).trim();
-            }
-        }
-        return null;
-    }
-
-    private String readCookieValue(Map<String, Object> event, String cookieName) {
-        if (event.get("cookies") instanceof List<?> cookies) {
-            for (Object cookie : cookies) {
-                if (cookie instanceof String s && s.startsWith(cookieName + "=")) {
-                    return s.substring(cookieName.length() + 1);
-                }
-            }
-        }
-        return null;
-    }
-
     // Redirects browser to Okta, remembering where it wanted to go in the state cookie.
     private Map<String, Object> redirectToOkta(Map<String, Object> event, String path) {
         byte[] randomTokenBytes = new byte[24];
         secureRandom.nextBytes(randomTokenBytes);
         String state = base64Url(randomTokenBytes);
-        // PKCE: challenge goes to Okta now, verifier rides the state cookie until /callback.
         byte[] verifierBytes = new byte[32];
         secureRandom.nextBytes(verifierBytes);
         String codeVerifier = base64Url(verifierBytes);
@@ -119,10 +96,6 @@ public class OktaDelegate {
                         + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=300"));
     }
 
-    private String base64Url(byte[] bytes) {
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
     // Exchanges the authorization code for an access token, stores it in a session cookie, then redirect back to self.
     private Map<String, Object> callback(Map<String, Object> event, Context context) {
         final String error = JsonUtils.getNestedField(event, "queryStringParameters", "error");
@@ -133,7 +106,7 @@ public class OktaDelegate {
         }
         final String code = JsonUtils.getNestedField(event, "queryStringParameters", "code");
         final String state = JsonUtils.getNestedField(event, "queryStringParameters", "state");
-        final String oathStateCookie = readCookieValue(event, OATH_STATE_COOKIE);
+        final String oathStateCookie = HttpUtils.readCookieValue(event, OATH_STATE_COOKIE);
         if (code == null || state == null || oathStateCookie == null || !oathStateCookie.startsWith(state + ".")) {
             return HttpUtils.htmlError(400, "Login state mismatch, retry.");
         }
@@ -181,6 +154,21 @@ public class OktaDelegate {
         return HttpUtils.response(302, Map.of("location", originallyRequestedUrl), "", List.of(
                 OKTA_TOKEN_COOKIE + "=" + accessToken + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=" + maxAge,
                 OATH_STATE_COOKIE + "=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0")); //clear out oath cookie
+    }
+
+    private String readBearerToken(Map<String, Object> event) {
+        for (Map.Entry<String, Object> entry : JsonUtils.getNestedMap(event, "headers").entrySet()) {
+            if ("authorization".equalsIgnoreCase(entry.getKey())
+                    && entry.getValue() instanceof String s
+                    && s.regionMatches(true, 0, "Bearer ", 0, 7)) {
+                return s.substring(7).trim();
+            }
+        }
+        return null;
+    }
+
+    private String base64Url(byte[] bytes) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private static byte[] sha256(String value) {

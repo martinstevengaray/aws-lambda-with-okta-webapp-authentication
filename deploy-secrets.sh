@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# Push the Okta web app client secret from local/config.sh to SSM
+# Push the Okta web app client secret from local/deployment-config.sh to SSM
 # Parameter Store. Run after the first ./deploy.sh (terraform creates the
 # parameter shell) and again whenever the secret rotates in Okta.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-source local/config.sh
+#loads:
+#  OKTA_WEB_CLIENT_SECRET
+source local/deployment-config.sh
 
 # Must match terraform: /<aws_lambda_function_name>/okta-web-client-secret
 PARAM_NAME="/okta-app-lambda/okta-web-client-secret"
