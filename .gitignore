@@ -7,6 +7,8 @@ terraform.tfvars
 tfplan
 .terraform.lock.hcl
 *.class
-.idea/
+.claude/
+bin/
 .vscode/
+.idea/
 local/
