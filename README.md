@@ -22,8 +22,7 @@ export TERRAFORM_TFSTATE_BUCKET="<your tfstate bucket>"
 ```
 4) Deploy lambda and associated infrastructure with [deploy.sh](deploy.sh) -auto-approve
 5) Deploy secrets with [deploy-secrets.sh](deploy-secrets.sh)  
-6) In Okta admin dashboard add the `<function_url>/callback` as the callback uri for the web app created in step 2  
-   (function_url can be found in the output of deploy.sh)
+6) In Okta admin dashboard add the `<function_url>/callback` as the callback uri for the web app created in step 2. (function_url can be found in the output of deploy.sh)
 7) Open lambda url in browser
 
 ### optional setup for api-curl.sh
