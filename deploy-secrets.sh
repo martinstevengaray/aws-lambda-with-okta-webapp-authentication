@@ -8,10 +8,11 @@ cd "$(dirname "$0")"
 #loads:
 #  OKTA_WEB_CLIENT_SECRET
 #  DEPLOYMENT_REGION
+#  LAMBDA_FUNCTION_NAME
 source local/deployment-config.sh
 
 # Must match terraform: /<aws_lambda_function_name>/okta-web-client-secret
-PARAM_NAME="/okta-app-lambda/okta-web-client-secret"
+PARAM_NAME="/${LAMBDA_FUNCTION_NAME}/okta-web-client-secret"
 
 if [ -z "${OKTA_WEB_CLIENT_SECRET:-}" ]; then
   echo "OKTA_WEB_CLIENT_SECRET is empty — nothing to push (browser flow disabled)."

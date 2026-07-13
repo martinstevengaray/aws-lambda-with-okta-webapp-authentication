@@ -9,9 +9,8 @@ variable "aws_region" {
 }
 
 variable "aws_lambda_function_name" {
-  description = "Name of the Lambda function"
+  description = "Name of the Lambda function (also prefixes the IAM role/policy and SSM parameter names). No default — set via LAMBDA_FUNCTION_NAME in local/deployment-config.sh."
   type        = string
-  default     = "okta-app-lambda"
 }
 
 variable "okta_issuer" {

@@ -17,6 +17,7 @@ export OKTA_SCOPES="<your okta scopes>"
 export TERRAFORM_TFSTATE_S3_BUCKET="<your terraform tfstate s3 bucket>"
 export TERRAFORM_TFSTATE_S3_REGION="<your terraform tfstate s3 region>"
 export DEPLOYMENT_REGION="<your deployment region>"
+export LAMBDA_FUNCTION_NAME="<your lambda function name>"
 ```
 4) Deploy lambda and associated infrastructure with [deploy.sh](deploy.sh) -auto-approve
 5) Deploy secrets with [deploy-secrets.sh](deploy-secrets.sh)  
