@@ -1,5 +1,5 @@
-# Webapp Template: AWS Lambda with Okta Authentication 
-### Confidential client, OIDC Web Application with PKCE, using browser redirects to Okta login page.  
+# AWS Lambda with Okta Webapp Authentication 
+### Confidential Client OIDC Web Application with PKCE. Browser redirects to Okta login page.  
 
 # Requirements
 1) AWS account
