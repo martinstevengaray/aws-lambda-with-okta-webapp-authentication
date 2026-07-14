@@ -29,9 +29,9 @@ export LAMBDA_FUNCTION_NAME="<your lambda function name>"
 2) Create new configuration script at: ./local/api-curl-config.sh
 ```bash
 export OKTA_URL_PREFIX="<your okta url prefix>"
+export OKTA_SCOPES="<your okta scopes>"
 export OKTA_API_CLIENT_ID="<your okta api client id>"
 export OKTA_API_CLIENT_SECRET="<your okta api client secret>"
-export OKTA_SCOPES="<your okta scopes>"
 export AWS_LAMBDA_URL="<your aws lambda url>"
 ```
 3) use [api-curl.sh](api-curl.sh) for example access.
