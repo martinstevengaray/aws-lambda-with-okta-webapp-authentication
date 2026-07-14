@@ -1,5 +1,7 @@
 # AWS Lambda with Okta Webapp Authentication
-### Confidential Client OIDC Web Application with PKCE. Browser redirects to Okta login page.  
+Confidential Client OIDC Web Application with PKCE on AWS Lambda.
+
+The goal of this project is to provide a template for a webapp-server with SSO integration deployed as an AWS lambda. It uses Java + Gradle for the server, Terraform for infrastructure, and bash scripts for deployment. The endpoints sit behind Okta authentication. If not already signed in with Okta SSO, the browser will redirect to the Okta login page. It is a great starting point for an SSO authenticated Web application, and provides a cost-effective way to deploy a serverless cloud solution.
 
 # Requirements
 * AWS account, Okta account  
